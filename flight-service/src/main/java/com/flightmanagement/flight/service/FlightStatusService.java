@@ -8,7 +8,7 @@ import com.flightmanagement.flight.entity.OperationalFlight;
 import com.flightmanagement.flight.enums.FlightStatus;
 import com.flightmanagement.flight.exception.FlightNotFoundException;
 import com.flightmanagement.flight.exception.UnauthorizedFlightAccessException;
-import com.flightmanagement.flight.mapper.OperationalFlightMapper;
+import com.flightmanagement.flight.mapper.OperationalFlightMapperImpl;
 import com.flightmanagement.flight.repository.OperationalFlightRepository;
 import com.flightmanagement.flight.security.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.List;
 public class FlightStatusService {
 
     private final OperationalFlightRepository flightRepository;
-    private final OperationalFlightMapper flightMapper;
+    private final OperationalFlightMapperImpl flightMapper;
     private final EventPublishService eventPublishService;
     private final WebSocketService webSocketService;
 

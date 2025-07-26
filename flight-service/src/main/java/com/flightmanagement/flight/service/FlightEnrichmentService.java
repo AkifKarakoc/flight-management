@@ -45,6 +45,9 @@ public class FlightEnrichmentService {
                 flight.setAirlineId(((Number) airline.get("id")).longValue());
                 flight.setAirlineCode((String) airline.get("code"));
                 flight.setAirlineName((String) airline.get("name"));
+            } else {
+                flight.setAirlineCode(airlineCode);
+                flight.setAirlineName("Unknown Airline");
             }
 
             // Resolve aircraft by type
@@ -53,6 +56,8 @@ public class FlightEnrichmentService {
                 Map<String, Object> aircraft = aircraftOpt.get();
                 flight.setAircraftId(((Number) aircraft.get("id")).longValue());
                 flight.setAircraftType((String) aircraft.get("type"));
+            } else {
+                flight.setAircraftType(aircraftType);
             }
 
             // Resolve origin station
@@ -61,6 +66,8 @@ public class FlightEnrichmentService {
                 Map<String, Object> origin = originOpt.get();
                 flight.setOriginStationId(((Number) origin.get("id")).longValue());
                 flight.setOriginIcaoCode((String) origin.get("icaoCode"));
+            } else {
+                flight.setOriginIcaoCode(originIcao);
             }
 
             // Resolve destination station
@@ -69,6 +76,8 @@ public class FlightEnrichmentService {
                 Map<String, Object> destination = destinationOpt.get();
                 flight.setDestinationStationId(((Number) destination.get("id")).longValue());
                 flight.setDestinationIcaoCode((String) destination.get("icaoCode"));
+            } else {
+                flight.setDestinationIcaoCode(destinationIcao);
             }
 
             log.debug("Successfully enriched CSV flight data for: {}", flight.getFlightNumber());
@@ -84,42 +93,64 @@ public class FlightEnrichmentService {
     }
 
     private void enrichAirlineData(OperationalFlight flight, Long airlineId) {
-        Map<String, Object> airline = referenceDataService.getAirline(airlineId);
-        if (airline != null) {
-            flight.setAirlineCode((String) airline.get("code"));
-            flight.setAirlineName((String) airline.get("name"));
+        try {
+            Map<String, Object> airline = referenceDataService.getAirline(airlineId);
+            if (airline != null) {
+                flight.setAirlineCode((String) airline.get("code"));
+                flight.setAirlineName((String) airline.get("name"));
+            } else {
+                setFallbackAirlineData(flight);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to enrich airline data for ID: {}", airlineId, e);
+            setFallbackAirlineData(flight);
         }
     }
 
     private void enrichAircraftData(OperationalFlight flight, Long aircraftId) {
-        Map<String, Object> aircraft = referenceDataService.getAircraft(aircraftId);
-        if (aircraft != null) {
-            flight.setAircraftType((String) aircraft.get("type"));
+        try {
+            Map<String, Object> aircraft = referenceDataService.getAircraft(aircraftId);
+            if (aircraft != null) {
+                flight.setAircraftType((String) aircraft.get("type"));
+            } else {
+                flight.setAircraftType("Unknown");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to enrich aircraft data for ID: {}", aircraftId, e);
+            flight.setAircraftType("Unknown");
         }
     }
 
     private void enrichStationData(OperationalFlight flight, Long originStationId, Long destinationStationId) {
         // Enrich origin station
-        Map<String, Object> originStation = referenceDataService.getStation(originStationId);
-        if (originStation != null) {
-            flight.setOriginIcaoCode((String) originStation.get("icaoCode"));
+        try {
+            Map<String, Object> originStation = referenceDataService.getStation(originStationId);
+            if (originStation != null) {
+                flight.setOriginIcaoCode((String) originStation.get("icaoCode"));
+            } else {
+                flight.setOriginIcaoCode("XXXX");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to enrich origin station data for ID: {}", originStationId, e);
+            flight.setOriginIcaoCode("XXXX");
         }
 
         // Enrich destination station
-        Map<String, Object> destinationStation = referenceDataService.getStation(destinationStationId);
-        if (destinationStation != null) {
-            flight.setDestinationIcaoCode((String) destinationStation.get("icaoCode"));
+        try {
+            Map<String, Object> destinationStation = referenceDataService.getStation(destinationStationId);
+            if (destinationStation != null) {
+                flight.setDestinationIcaoCode((String) destinationStation.get("icaoCode"));
+            } else {
+                flight.setDestinationIcaoCode("YYYY");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to enrich destination station data for ID: {}", destinationStationId, e);
+            flight.setDestinationIcaoCode("YYYY");
         }
     }
 
     private void setFallbackData(OperationalFlight flight, OperationalFlightCreateRequestDto request) {
-        // Set minimal fallback data
-        if (flight.getAirlineCode() == null) {
-            flight.setAirlineCode("XX");
-        }
-        if (flight.getAirlineName() == null) {
-            flight.setAirlineName("Unknown Airline");
-        }
+        setFallbackAirlineData(flight);
         if (flight.getAircraftType() == null) {
             flight.setAircraftType("Unknown");
         }
@@ -128,6 +159,15 @@ public class FlightEnrichmentService {
         }
         if (flight.getDestinationIcaoCode() == null) {
             flight.setDestinationIcaoCode("YYYY");
+        }
+    }
+
+    private void setFallbackAirlineData(OperationalFlight flight) {
+        if (flight.getAirlineCode() == null) {
+            flight.setAirlineCode("XX");
+        }
+        if (flight.getAirlineName() == null) {
+            flight.setAirlineName("Unknown Airline");
         }
     }
 }

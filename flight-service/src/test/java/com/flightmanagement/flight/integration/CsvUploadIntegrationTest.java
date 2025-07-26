@@ -1,34 +1,23 @@
 package com.flightmanagement.flight.integration;
 
+import com.flightmanagement.flight.entity.FlightUploadBatch;
+import com.flightmanagement.flight.entity.OperationalFlight;
+import com.flightmanagement.flight.enums.UploadStatus;
 import com.flightmanagement.flight.repository.FlightUploadBatchRepository;
 import com.flightmanagement.flight.repository.OperationalFlightRepository;
-import com.flightmanagement.flight.security.UserContext;
+import com.flightmanagement.flight.util.TestDataBuilder;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureWebMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.util.List;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@AutoConfigureWebMvc
-@ActiveProfiles("test")
-@Transactional
-class CsvUploadIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
+class CsvUploadIntegrationTest extends BaseIntegrationTest {
 
     @Autowired
     private FlightUploadBatchRepository batchRepository;
@@ -37,91 +26,182 @@ class CsvUploadIntegrationTest {
     private OperationalFlightRepository flightRepository;
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void uploadCsvFile_ValidFile_ReturnsAccepted() throws Exception {
+    void uploadCsvFile_ValidFile_Success() throws InterruptedException {
         // Given
-        String csvContent = """
-                flightNumber,airlineCode,aircraftType,flightDate,scheduledDepartureTime,scheduledArrivalTime,originIcaoCode,destinationIcaoCode,flightType
-                TK123,TK,A320,2025-02-15,10:30,13:45,LTBA,EDDF,PASSENGER
-                """;
+        String csvContent = TestDataBuilder.createValidCsvContent();
+        ByteArrayResource fileResource = new ByteArrayResource(csvContent.getBytes()) {
+            @Override
+            public String getFilename() {
+                return "test-flights.csv";
+            }
+        };
 
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "test-flights.csv",
-                "text/csv",
-                csvContent.getBytes()
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", fileResource);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth("mock-airline-token");
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl + "/api/v1/flights/upload",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
         );
 
-        UserContext userContext = UserContext.builder()
-                .userId(1L)
-                .username("admin")
-                .airlineId(1L)
-                .roles(List.of("ROLE_ADMIN"))
-                .build();
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(response.getBody()).contains("File upload started");
 
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                userContext, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        // Wait for async processing to complete
+        Thread.sleep(2000);
 
-        // When & Then
-        mockMvc.perform(multipart("/api/v1/flights/upload")
-                        .file(file)
-                        .with(authentication(auth)))
-                .andExpect(status().isAccepted());
+        // Verify upload batch was created
+        List<FlightUploadBatch> batches = batchRepository.findAll();
+        assertThat(batches).isNotEmpty();
+
+        FlightUploadBatch batch = batches.get(0);
+        assertThat(batch.getFileName()).isEqualTo("test-flights.csv");
+        assertThat(batch.getStatus()).isIn(UploadStatus.PROCESSING, UploadStatus.COMPLETED);
+
+        // If processing completed successfully, verify flights were created
+        if (batch.getStatus() == UploadStatus.COMPLETED) {
+            List<OperationalFlight> flights = flightRepository.findAll();
+            assertThat(flights).isNotEmpty();
+            assertThat(flights.get(0).getUploadBatchId()).isEqualTo(batch.getId());
+        }
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void uploadCsvFile_InvalidFileType_ReturnsBadRequest() throws Exception {
+    void uploadCsvFile_InvalidFileType_ReturnsBadRequest() {
         // Given
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "test.txt",
-                "text/plain",
-                "invalid content".getBytes()
+        ByteArrayResource fileResource = new ByteArrayResource("invalid content".getBytes()) {
+            @Override
+            public String getFilename() {
+                return "test.txt";
+            }
+        };
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", fileResource);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth("mock-airline-token");
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl + "/api/v1/flights/upload",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
         );
 
-        UserContext userContext = UserContext.builder()
-                .userId(1L)
-                .username("admin")
-                .airlineId(1L)
-                .roles(List.of("ROLE_ADMIN"))
-                .build();
-
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                userContext, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
-
-        // When & Then
-        mockMvc.perform(multipart("/api/v1/flights/upload")
-                        .file(file)
-                        .with(authentication(auth)))
-                .andExpect(status().isBadRequest());
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("Only CSV files are allowed");
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
-    void uploadCsvFile_EmptyFile_ReturnsBadRequest() throws Exception {
+    void uploadCsvFile_EmptyFile_ReturnsBadRequest() {
         // Given
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "empty.csv",
-                "text/csv",
-                new byte[0]
+        ByteArrayResource fileResource = new ByteArrayResource(new byte[0]) {
+            @Override
+            public String getFilename() {
+                return "empty.csv";
+            }
+        };
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", fileResource);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth("mock-airline-token");
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl + "/api/v1/flights/upload",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
         );
 
-        UserContext userContext = UserContext.builder()
-                .userId(1L)
-                .username("admin")
-                .airlineId(1L)
-                .roles(List.of("ROLE_ADMIN"))
-                .build();
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("File is empty");
+    }
 
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                userContext, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+    @Test
+    void uploadCsvFile_LargeFile_ReturnsBadRequest() {
+        // Given
+        byte[] largeContent = new byte[11 * 1024 * 1024]; // 11MB (exceeds 10MB limit)
+        ByteArrayResource fileResource = new ByteArrayResource(largeContent) {
+            @Override
+            public String getFilename() {
+                return "large.csv";
+            }
+        };
 
-        // When & Then
-        mockMvc.perform(multipart("/api/v1/flights/upload")
-                        .file(file)
-                        .with(authentication(auth)))
-                .andExpect(status().isBadRequest());
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", fileResource);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.setBearerAuth("mock-airline-token");
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl + "/api/v1/flights/upload",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+        );
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("File size exceeds 10MB limit");
+    }
+
+    @Test
+    void uploadCsvFile_NoAuthentication_ReturnsUnauthorized() {
+        // Given
+        String csvContent = TestDataBuilder.createValidCsvContent();
+        ByteArrayResource fileResource = new ByteArrayResource(csvContent.getBytes()) {
+            @Override
+            public String getFilename() {
+                return "test.csv";
+            }
+        };
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", fileResource);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        // No authentication
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        // When
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl + "/api/v1/flights/upload",
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+        );
+
+        // Then
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

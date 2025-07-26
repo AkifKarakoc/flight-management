@@ -8,11 +8,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-    show-sql: true
+    show-sql: false
     defer-datasource-initialization: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
 
   liquibase:
     enabled: false
@@ -36,11 +37,24 @@ app:
 
   reference-manager:
     base-url: http://localhost:8081/reference-manager
+    timeout: 5s
 
   kafka:
     topics:
       flight-events: test.flight.events
       upload-events: test.upload.events
+
+  redis:
+    ttl:
+      airlines: PT1H
+      stations: PT2H
+      aircraft: PT1H
+      flight-lookups: PT30M
+
+  file-upload:
+    max-size: 10485760
+    max-rows: 1000
+    allowed-types: ["text/csv", "application/csv"]
 
 resilience4j:
   circuitbreaker:
@@ -53,5 +67,7 @@ resilience4j:
 logging:
   level:
     com.flightmanagement.flight: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.web: DEBUG
+    org.springframework.security: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

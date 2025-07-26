@@ -87,7 +87,8 @@ public class WebSocketService {
                 .previousStatus(previousStatus)
                 .currentStatus(flight.getStatus())
                 .actualTime(flight.getActualArrivalTime() != null ? flight.getActualArrivalTime() : flight.getActualDepartureTime())
-                .delay(flight.getArrivalDelay() != null ? flight.getArrivalDelay() : flight.getDepartureDelay())
+                .delay(flight.getArrivalDelay() != null && flight.getArrivalDelay() > 0 ? flight.getArrivalDelay() :
+                        (flight.getDepartureDelay() != null && flight.getDepartureDelay() > 0 ? flight.getDepartureDelay() : null))
                 .eventType("STATUS_UPDATE")
                 .timestamp(LocalDateTime.now())
                 .build();

@@ -1,16 +1,15 @@
 package com.flightmanagement.flight.service;
 
+import com.flightmanagement.flight.config.FlightServiceProperties;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,15 +22,13 @@ public class ReferenceDataService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final RestTemplate restTemplate;
-
-    @Value("${app.reference-manager.base-url}")
-    private String referenceManagerBaseUrl;
+    private final FlightServiceProperties properties;
 
     @CircuitBreaker(name = "reference-manager", fallbackMethod = "getAirlineFromCache")
     @Cacheable(value = "airlines", key = "#airlineId")
     public Map<String, Object> getAirline(Long airlineId) {
         try {
-            String url = referenceManagerBaseUrl + "/api/v1/airlines/" + airlineId;
+            String url = properties.getReferenceManager().getBaseUrl() + "/api/v1/airlines/" + airlineId;
             log.debug("Fetching airline data from: {}", url);
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -39,8 +36,9 @@ public class ReferenceDataService {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> airline = response.getBody();
 
-                // Cache with longer TTL
-                redisTemplate.opsForValue().set("airline:" + airlineId, airline, Duration.ofHours(4));
+                // Cache with configured TTL
+                redisTemplate.opsForValue().set("airline:" + airlineId, airline,
+                        properties.getRedis().getTtl().getAirlines());
                 log.debug("Cached airline data for ID: {}", airlineId);
 
                 return airline;
@@ -58,7 +56,7 @@ public class ReferenceDataService {
     @Cacheable(value = "stations", key = "#stationId")
     public Map<String, Object> getStation(Long stationId) {
         try {
-            String url = referenceManagerBaseUrl + "/api/v1/stations/" + stationId;
+            String url = properties.getReferenceManager().getBaseUrl() + "/api/v1/stations/" + stationId;
             log.debug("Fetching station data from: {}", url);
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -66,7 +64,8 @@ public class ReferenceDataService {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> station = response.getBody();
 
-                redisTemplate.opsForValue().set("station:" + stationId, station, Duration.ofHours(8));
+                redisTemplate.opsForValue().set("station:" + stationId, station,
+                        properties.getRedis().getTtl().getStations());
                 log.debug("Cached station data for ID: {}", stationId);
 
                 return station;
@@ -84,7 +83,7 @@ public class ReferenceDataService {
     @Cacheable(value = "aircraft", key = "#aircraftId")
     public Map<String, Object> getAircraft(Long aircraftId) {
         try {
-            String url = referenceManagerBaseUrl + "/api/v1/aircraft/" + aircraftId;
+            String url = properties.getReferenceManager().getBaseUrl() + "/api/v1/aircraft/" + aircraftId;
             log.debug("Fetching aircraft data from: {}", url);
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -92,7 +91,8 @@ public class ReferenceDataService {
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> aircraft = response.getBody();
 
-                redisTemplate.opsForValue().set("aircraft:" + aircraftId, aircraft, Duration.ofHours(2));
+                redisTemplate.opsForValue().set("aircraft:" + aircraftId, aircraft,
+                        properties.getRedis().getTtl().getAircraft());
                 log.debug("Cached aircraft data for ID: {}", aircraftId);
 
                 return aircraft;
@@ -110,7 +110,7 @@ public class ReferenceDataService {
     @CircuitBreaker(name = "reference-manager", fallbackMethod = "getAirlineByCodeFromCache")
     public Optional<Map<String, Object>> getAirlineByCode(String airlineCode) {
         try {
-            String url = referenceManagerBaseUrl + "/api/v1/airlines?code=" + airlineCode;
+            String url = properties.getReferenceManager().getBaseUrl() + "/api/v1/airlines?code=" + airlineCode;
             log.debug("Fetching airline by code from: {}", url);
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -124,8 +124,10 @@ public class ReferenceDataService {
                     Long airlineId = ((Number) airline.get("id")).longValue();
 
                     // Cache both by ID and code
-                    redisTemplate.opsForValue().set("airline:" + airlineId, airline, Duration.ofHours(4));
-                    redisTemplate.opsForValue().set("airline:code:" + airlineCode, airline, Duration.ofHours(4));
+                    redisTemplate.opsForValue().set("airline:" + airlineId, airline,
+                            properties.getRedis().getTtl().getAirlines());
+                    redisTemplate.opsForValue().set("airline:code:" + airlineCode, airline,
+                            properties.getRedis().getTtl().getAirlines());
 
                     return Optional.of(airline);
                 }
@@ -143,7 +145,7 @@ public class ReferenceDataService {
     @CircuitBreaker(name = "reference-manager", fallbackMethod = "getStationByIcaoFromCache")
     public Optional<Map<String, Object>> getStationByIcao(String icaoCode) {
         try {
-            String url = referenceManagerBaseUrl + "/api/v1/stations/search?query=" + icaoCode;
+            String url = properties.getReferenceManager().getBaseUrl() + "/api/v1/stations/search?query=" + icaoCode;
             log.debug("Fetching station by ICAO from: {}", url);
 
             ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
@@ -160,8 +162,10 @@ public class ReferenceDataService {
                     Long stationId = ((Number) stationData.get("id")).longValue();
 
                     // Cache both by ID and ICAO
-                    redisTemplate.opsForValue().set("station:" + stationId, stationData, Duration.ofHours(8));
-                    redisTemplate.opsForValue().set("station:icao:" + icaoCode, stationData, Duration.ofHours(8));
+                    redisTemplate.opsForValue().set("station:" + stationId, stationData,
+                            properties.getRedis().getTtl().getStations());
+                    redisTemplate.opsForValue().set("station:icao:" + icaoCode, stationData,
+                            properties.getRedis().getTtl().getStations());
 
                     return Optional.of(stationData);
                 }
@@ -179,7 +183,7 @@ public class ReferenceDataService {
     @CircuitBreaker(name = "reference-manager", fallbackMethod = "getAircraftByTypeFromCache")
     public Optional<Map<String, Object>> getAircraftByType(String aircraftType) {
         try {
-            String url = referenceManagerBaseUrl + "/api/v1/aircraft?type=" + aircraftType;
+            String url = properties.getReferenceManager().getBaseUrl() + "/api/v1/aircraft?type=" + aircraftType;
             log.debug("Fetching aircraft by type from: {}", url);
 
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
@@ -193,8 +197,10 @@ public class ReferenceDataService {
                     Long aircraftId = ((Number) aircraft.get("id")).longValue();
 
                     // Cache both by ID and type
-                    redisTemplate.opsForValue().set("aircraft:" + aircraftId, aircraft, Duration.ofHours(2));
-                    redisTemplate.opsForValue().set("aircraft:type:" + aircraftType, aircraft, Duration.ofHours(2));
+                    redisTemplate.opsForValue().set("aircraft:" + aircraftId, aircraft,
+                            properties.getRedis().getTtl().getAircraft());
+                    redisTemplate.opsForValue().set("aircraft:type:" + aircraftType, aircraft,
+                            properties.getRedis().getTtl().getAircraft());
 
                     return Optional.of(aircraft);
                 }
@@ -281,12 +287,88 @@ public class ReferenceDataService {
     // Health check method
     public boolean isReferenceManagerHealthy() {
         try {
-            String url = referenceManagerBaseUrl + "/actuator/health";
+            String url = properties.getReferenceManager().getBaseUrl() + "/actuator/health";
             ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
             return response.getStatusCode() == HttpStatus.OK;
         } catch (Exception e) {
             log.error("Reference Manager health check failed", e);
             return false;
         }
+    }
+
+    // Cache invalidation methods
+    public void invalidateAirlineCache(Long airlineId) {
+        redisTemplate.delete("airline:" + airlineId);
+        log.debug("Invalidated airline cache for ID: {}", airlineId);
+    }
+
+    public void invalidateStationCache(Long stationId) {
+        redisTemplate.delete("station:" + stationId);
+        log.debug("Invalidated station cache for ID: {}", stationId);
+    }
+
+    public void invalidateAircraftCache(Long aircraftId) {
+        redisTemplate.delete("aircraft:" + aircraftId);
+        log.debug("Invalidated aircraft cache for ID: {}", aircraftId);
+    }
+
+    public void invalidateAllCaches() {
+        redisTemplate.getConnectionFactory().getConnection().flushAll();
+        log.info("Invalidated all reference data caches");
+    }
+
+    // Batch operations for performance
+    public Map<Long, Map<String, Object>> getAirlinesBatch(List<Long> airlineIds) {
+        Map<Long, Map<String, Object>> result = new HashMap<>();
+
+        for (Long airlineId : airlineIds) {
+            try {
+                Map<String, Object> airline = getAirline(airlineId);
+                if (airline != null) {
+                    result.put(airlineId, airline);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch airline in batch for ID: {}", airlineId, e);
+                result.put(airlineId, createFallbackAirline(airlineId));
+            }
+        }
+
+        return result;
+    }
+
+    public Map<Long, Map<String, Object>> getStationsBatch(List<Long> stationIds) {
+        Map<Long, Map<String, Object>> result = new HashMap<>();
+
+        for (Long stationId : stationIds) {
+            try {
+                Map<String, Object> station = getStation(stationId);
+                if (station != null) {
+                    result.put(stationId, station);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch station in batch for ID: {}", stationId, e);
+                result.put(stationId, createFallbackStation(stationId));
+            }
+        }
+
+        return result;
+    }
+
+    public Map<Long, Map<String, Object>> getAircraftBatch(List<Long> aircraftIds) {
+        Map<Long, Map<String, Object>> result = new HashMap<>();
+
+        for (Long aircraftId : aircraftIds) {
+            try {
+                Map<String, Object> aircraft = getAircraft(aircraftId);
+                if (aircraft != null) {
+                    result.put(aircraftId, aircraft);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch aircraft in batch for ID: {}", aircraftId, e);
+                result.put(aircraftId, createFallbackAircraft(aircraftId));
+            }
+        }
+
+        return result;
     }
 }

@@ -1,5 +1,6 @@
 package com.flightmanagement.flight.security;
 
+import com.flightmanagement.flight.config.FlightServiceProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -16,8 +17,8 @@ public class JwtValidationService {
 
     private final SecretKey key;
 
-    public JwtValidationService(@Value("${app.jwt.secret}") String jwtSecret) {
-        this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+    public JwtValidationService(FlightServiceProperties properties) {
+        this.key = Keys.hmacShaKeyFor(properties.getJwt().getSecret().getBytes());
     }
 
     public UserContext validateAndExtractUser(String token) {

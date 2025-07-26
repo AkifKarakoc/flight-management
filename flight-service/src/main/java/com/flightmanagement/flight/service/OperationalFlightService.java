@@ -7,7 +7,7 @@ import com.flightmanagement.flight.entity.OperationalFlight;
 import com.flightmanagement.flight.exception.FlightConflictException;
 import com.flightmanagement.flight.exception.FlightNotFoundException;
 import com.flightmanagement.flight.exception.UnauthorizedFlightAccessException;
-import com.flightmanagement.flight.mapper.OperationalFlightMapper;
+import com.flightmanagement.flight.mapper.OperationalFlightMapperImpl;
 import com.flightmanagement.flight.repository.OperationalFlightRepository;
 import com.flightmanagement.flight.security.UserContext;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,7 @@ import java.util.Map;
 public class OperationalFlightService {
 
     private final OperationalFlightRepository flightRepository;
-    private final OperationalFlightMapper flightMapper;
+    private final OperationalFlightMapperImpl flightMapper;
     private final ConflictDetectionService conflictService;
     private final ReferenceDataService referenceService;
     private final EventPublishService eventPublishService;
