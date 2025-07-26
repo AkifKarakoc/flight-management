@@ -1,0 +1,79 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-audit-logs-table
+      author: flight-management
+      changes:
+        - createTable:
+            tableName: audit_logs
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: entity_type
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: entity_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: action
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: BIGINT
+              - column:
+                  name: username
+                  type: VARCHAR(50)
+              - column:
+                  name: airline_id
+                  type: BIGINT
+              - column:
+                  name: old_data
+                  type: TEXT
+              - column:
+                  name: new_data
+                  type: TEXT
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 002-create-audit-logs-indexes
+      author: flight-management
+      changes:
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_entity
+            columns:
+              - column:
+                  name: entity_type
+              - column:
+                  name: entity_id
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_user
+            columns:
+              - column:
+                  name: user_id
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_airline
+            columns:
+              - column:
+                  name: airline_id
+        - createIndex:
+            tableName: audit_logs
+            indexName: idx_audit_created
+            columns:
+              - column:
+                  name: created_at

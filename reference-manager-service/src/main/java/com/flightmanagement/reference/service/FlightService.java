@@ -15,12 +15,15 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
+
 
 import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class FlightService {
 
     private final FlightRepository flightRepository;
@@ -29,6 +32,8 @@ public class FlightService {
     private final RouteSegmentService routeSegmentService;
     private final AirlineService airlineService;
     private final AircraftService aircraftService;
+    private final AuditService auditService;
+
 
     public PagedResponse<FlightResponseDto> getFlights(Pageable pageable, UserContext userContext,
                                                        LocalDate flightDate, Long airlineId) {
@@ -89,6 +94,8 @@ public class FlightService {
             routeSegmentService.createSegmentsForFlight(flight, request.getSegments());
         }
 
+        // Audit log
+        auditService.logAction("FLIGHT", flight.getId(), "CREATE", userContext, null, flight);
 
         eventPublishService.publishReferenceEvent("CREATED", "FLIGHT", flight.getId(), flight.getAirlineId());
 
@@ -108,6 +115,11 @@ public class FlightService {
     public FlightResponseDto updateFlight(Long id, FlightCreateRequestDto request, UserContext userContext) {
         Flight flight = getFlightWithAccessCheck(id, userContext);
 
+        // Old data for audit - sadece önemli alanları kopyalayalım
+        String oldFlightData = String.format("FlightNumber: %s, Date: %s, Departure: %s, Arrival: %s",
+                flight.getFlightNumber(), flight.getFlightDate(),
+                flight.getDepartureTime(), flight.getArrivalTime());
+
         // Check for duplicate if flight number or date changed
         if (!flight.getFlightNumber().equals(request.getFlightNumber()) ||
                 !flight.getFlightDate().equals(request.getFlightDate())) {
@@ -126,6 +138,9 @@ public class FlightService {
             routeSegmentService.updateSegmentsForFlight(flight, request.getSegments());
         }
 
+        // Audit log - string olarak geçelim
+        auditService.logAction("FLIGHT", flight.getId(), "UPDATE", userContext, oldFlightData, flight);
+
         eventPublishService.publishReferenceEvent("UPDATED", "FLIGHT", flight.getId(), flight.getAirlineId());
 
         FlightResponseDto response = flightMapper.toResponseDto(flight);
@@ -142,6 +157,8 @@ public class FlightService {
 
         // Soft delete segments
         routeSegmentService.deleteSegmentsByFlightId(flight.getId());
+
+        auditService.logAction("FLIGHT", flight.getId(), "DELETE", userContext, flight, null);
 
         eventPublishService.publishReferenceEvent("DELETED", "FLIGHT", flight.getId(), flight.getAirlineId());
     }
@@ -163,12 +180,29 @@ public class FlightService {
         }
     }
 
+    // FlightService.java içindeki createPagedResponse metodunu güncelleyin:
+
     private PagedResponse<FlightResponseDto> createPagedResponse(Page<Flight> page) {
         return PagedResponse.<FlightResponseDto>builder()
                 .content(page.getContent().stream().map(flight -> {
                     FlightResponseDto response = flightMapper.toResponseDto(flight);
-                    response.setAirline(airlineService.getAirlineById(flight.getAirlineId()));
-                    response.setAircraft(aircraftService.getAircraftById(flight.getAircraftId()));
+
+                    try {
+                        response.setAirline(airlineService.getAirlineById(flight.getAirlineId()));
+                    } catch (Exception e) {
+                        log.warn("Failed to load airline data for flight {}: {}", flight.getId(), e.getMessage());
+                        // Set minimal airline info as fallback
+                        response.setAirline(null);
+                    }
+
+                    try {
+                        response.setAircraft(aircraftService.getAircraftById(flight.getAircraftId()));
+                    } catch (Exception e) {
+                        log.warn("Failed to load aircraft data for flight {}: {}", flight.getId(), e.getMessage());
+                        // Set minimal aircraft info as fallback
+                        response.setAircraft(null);
+                    }
+
                     return response;
                 }).toList())
                 .page(page.getNumber())

@@ -61,6 +61,14 @@ app:
       stations: 7200
       aircraft: 3600
 
+# Swagger Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+
 management:
   endpoints:
     web:

@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/002-create-indexes.yaml
   - include:
       file: db/changelog/003-insert-sample-data.yaml
+  - include:
+      file: db/changelog/004-create-audit-logs.yaml

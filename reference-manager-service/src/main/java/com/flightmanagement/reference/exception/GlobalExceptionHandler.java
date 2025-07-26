@@ -9,6 +9,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -79,5 +80,26 @@ public class GlobalExceptionHandler {
                 .message(ex.getMessage())
                 .build();
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+    }
+
+    // GlobalExceptionHandler.java dosyasına bu metodu ekleyin:
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponseDto> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String message = "Data integrity constraint violation";
+
+        if (ex.getMessage().contains("Duplicate entry")) {
+            message = "Duplicate data entry. This record already exists.";
+        } else if (ex.getMessage().contains("foreign key constraint")) {
+            message = "Cannot perform operation due to related data dependencies.";
+        }
+
+        ErrorResponseDto error = ErrorResponseDto.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Data Integrity Violation")
+                .message(message)
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 }

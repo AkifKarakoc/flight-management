@@ -48,8 +48,11 @@ public class RouteSegmentService {
     }
 
     public void updateSegmentsForFlight(Flight flight, List<RouteSegmentCreateRequestDto> segmentDtos) {
-        // Delete existing segments
-        deleteSegmentsByFlightId(flight.getId());
+        // Hard delete existing segments to avoid unique constraint conflicts
+        hardDeleteSegmentsByFlightId(flight.getId());
+
+        // Flush to ensure deletion is executed before inserting new ones
+        segmentRepository.flush();
 
         // Create new segments
         createSegmentsForFlight(flight, segmentDtos);
@@ -77,5 +80,9 @@ public class RouteSegmentService {
         List<RouteSegment> segments = segmentRepository.findByFlightIdOrderBySegmentOrder(flightId);
         segments.forEach(segment -> segment.setIsActive(false));
         segmentRepository.saveAll(segments);
+    }
+
+    private void hardDeleteSegmentsByFlightId(Long flightId) {
+        segmentRepository.deleteByFlightId(flightId);
     }
 }
