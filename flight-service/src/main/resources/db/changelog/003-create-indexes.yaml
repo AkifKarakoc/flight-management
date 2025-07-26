@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-performance-indexes
+      author: flight-management
+      changes:
+        - createIndex:
+            tableName: operational_flights
+            indexName: idx_flights_airline_date
+            columns:
+              - column:
+                  name: airline_id
+              - column:
+                  name: flight_date
+        - createIndex:
+            tableName: operational_flights
+            indexName: idx_flights_date
+            columns:
+              - column:
+                  name: flight_date
+        - createIndex:
+            tableName: operational_flights
+            indexName: idx_flights_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: operational_flights
+            indexName: idx_flights_aircraft_date
+            columns:
+              - column:
+                  name: aircraft_id
+              - column:
+                  name: flight_date
+        - createIndex:
+            tableName: operational_flights
+            indexName: idx_flights_origin_date
+            columns:
+              - column:
+                  name: origin_station_id
+              - column:
+                  name: flight_date
+        - createIndex:
+            tableName: flight_upload_batches
+            indexName: idx_batches_airline
+            columns:
+              - column:
+                  name: airline_id
+        - createIndex:
+            tableName: flight_upload_batches
+            indexName: idx_batches_status
+            columns:
+              - column:
+                  name: status
+        - createIndex:
+            tableName: flight_conflicts
+            indexName: idx_conflicts_batch
+            columns:
+              - column:
+                  name: upload_batch_id
+
+  - changeSet:
+      id: 004-add-unique-constraints
+      author: flight-management
+      changes:
+        - addUniqueConstraint:
+            tableName: operational_flights
+            columnNames: flight_number, airline_id, flight_date, version
+            constraintName: uk_flights_number_airline_date_version

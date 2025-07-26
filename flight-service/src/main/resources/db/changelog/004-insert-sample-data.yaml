@@ -1,0 +1,56 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-insert-sample-data
+      author: flight-management
+      changes:
+        - insert:
+            tableName: operational_flights
+            columns:
+              - column:
+                  name: flight_number
+                  value: TK123
+              - column:
+                  name: airline_id
+                  value: 1
+              - column:
+                  name: airline_code
+                  value: TK
+              - column:
+                  name: airline_name
+                  value: Turkish Airlines
+              - column:
+                  name: aircraft_id
+                  value: 1
+              - column:
+                  name: aircraft_type
+                  value: A320
+              - column:
+                  name: flight_date
+                  value: '2025-01-15'
+              - column:
+                  name: scheduled_departure_time
+                  value: '10:30:00'
+              - column:
+                  name: scheduled_arrival_time
+                  value: '13:45:00'
+              - column:
+                  name: origin_station_id
+                  value: 1
+              - column:
+                  name: origin_icao_code
+                  value: LTBA
+              - column:
+                  name: destination_station_id
+                  value: 2
+              - column:
+                  name: destination_icao_code
+                  value: EDDF
+              - column:
+                  name: flight_type
+                  value: PASSENGER
+              - column:
+                  name: created_by
+                  value: system
+              - column:
+                  name: updated_by
+                  value: system

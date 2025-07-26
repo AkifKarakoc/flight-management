@@ -1,0 +1,143 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-operational-flights-table
+      author: flight-management
+      changes:
+        - createTable:
+            tableName: operational_flights
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: flight_number
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: airline_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: airline_code
+                  type: VARCHAR(3)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: airline_name
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aircraft_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: aircraft_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: flight_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_departure_time
+                  type: TIME
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_arrival_time
+                  type: TIME
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actual_departure_time
+                  type: TIME
+              - column:
+                  name: actual_arrival_time
+                  type: TIME
+              - column:
+                  name: departure_delay
+                  type: INT
+                  defaultValue: 0
+              - column:
+                  name: arrival_delay
+                  type: INT
+                  defaultValue: 0
+              - column:
+                  name: origin_station_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: origin_icao_code
+                  type: VARCHAR(4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: destination_station_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: destination_icao_code
+                  type: VARCHAR(4)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: gate
+                  type: VARCHAR(10)
+              - column:
+                  name: terminal
+                  type: VARCHAR(5)
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: 'SCHEDULED'
+              - column:
+                  name: flight_type
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cancellation_reason
+                  type: VARCHAR(255)
+              - column:
+                  name: delay_reason
+                  type: VARCHAR(255)
+              - column:
+                  name: version
+                  type: INT
+                  defaultValue: 1
+              - column:
+                  name: upload_batch_id
+                  type: BIGINT
+              - column:
+                  name: is_active
+                  type: BOOLEAN
+                  defaultValue: true
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValue: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValue: CURRENT_TIMESTAMP
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_by
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false

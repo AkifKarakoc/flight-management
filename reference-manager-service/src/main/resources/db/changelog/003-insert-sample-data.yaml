@@ -1,0 +1,195 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-insert-sample-airlines
+      author: flight-management
+      changes:
+        - insert:
+            tableName: airlines
+            columns:
+              - column:
+                  name: code
+                  value: TK
+              - column:
+                  name: name
+                  value: Turkish Airlines
+              - column:
+                  name: country
+                  value: Turkey
+        - insert:
+            tableName: airlines
+            columns:
+              - column:
+                  name: code
+                  value: LH
+              - column:
+                  name: name
+                  value: Lufthansa
+              - column:
+                  name: country
+                  value: Germany
+
+  - changeSet:
+      id: 002-insert-sample-stations
+      author: flight-management
+      changes:
+        - insert:
+            tableName: stations
+            columns:
+              - column:
+                  name: icao_code
+                  value: LTBA
+              - column:
+                  name: iata_code
+                  value: IST
+              - column:
+                  name: name
+                  value: Istanbul Airport
+              - column:
+                  name: city
+                  value: Istanbul
+              - column:
+                  name: country
+                  value: Turkey
+              - column:
+                  name: timezone
+                  value: Europe/Istanbul
+        - insert:
+            tableName: stations
+            columns:
+              - column:
+                  name: icao_code
+                  value: EDDF
+              - column:
+                  name: iata_code
+                  value: FRA
+              - column:
+                  name: name
+                  value: Frankfurt Airport
+              - column:
+                  name: city
+                  value: Frankfurt
+              - column:
+                  name: country
+                  value: Germany
+              - column:
+                  name: timezone
+                  value: Europe/Berlin
+
+  - changeSet:
+      id: 003-insert-sample-aircraft
+      author: flight-management
+      changes:
+        - insert:
+            tableName: aircraft
+            columns:
+              - column:
+                  name: type
+                  value: A320
+              - column:
+                  name: manufacturer
+                  value: Airbus
+              - column:
+                  name: model
+                  value: A320-200
+              - column:
+                  name: capacity
+                  value: 180
+        - insert:
+            tableName: aircraft
+            columns:
+              - column:
+                  name: type
+                  value: B737
+              - column:
+                  name: manufacturer
+                  value: Boeing
+              - column:
+                  name: model
+                  value: 737-800
+              - column:
+                  name: capacity
+                  value: 162
+
+  - changeSet:
+      id: 004-insert-admin-user
+      author: flight-management
+      changes:
+        - insert:
+            tableName: users
+            columns:
+              - column:
+                  name: username
+                  value: admin
+              - column:
+                  name: password
+                  value: $2a$10$4K0p7vKfGKwGvz8jJh.KG.D1c7YxLJ5s4Y8qU7vBZnW3ZCpHJgQ1S
+              - column:
+                  name: email
+                  value: admin@flightmanagement.com
+              - column:
+                  name: first_name
+                  value: System
+              - column:
+                  name: last_name
+                  value: Administrator
+              - column:
+                  name: role
+                  value: ADMIN
+              - column:
+                  name: is_active
+                  value: true
+              - column:
+                  name: is_approved
+                  value: true
+  - changeSet:
+      id: 005-insert-sample-flight
+      author: flight-management
+      changes:
+        - insert:
+            tableName: flights
+            columns:
+              - column:
+                  name: flight_number
+                  value: TK123
+              - column:
+                  name: airline_id
+                  value: 1
+              - column:
+                  name: aircraft_id
+                  value: 1
+              - column:
+                  name: flight_date
+                  value: '2025-02-15'
+              - column:
+                  name: departure_time
+                  value: '10:30:00'
+              - column:
+                  name: arrival_time
+                  value: '13:45:00'
+              - column:
+                  name: flight_type
+                  value: PASSENGER
+        - insert:
+            tableName: route_segments
+            columns:
+              - column:
+                  name: flight_id
+                  value: 1
+              - column:
+                  name: segment_order
+                  value: 1
+              - column:
+                  name: origin_station_id
+                  value: 1
+              - column:
+                  name: destination_station_id
+                  value: 2
+              - column:
+                  name: scheduled_departure
+                  value: '2025-02-15 10:30:00'
+              - column:
+                  name: scheduled_arrival
+                  value: '2025-02-15 13:45:00'
+              - column:
+                  name: distance
+                  value: 1200

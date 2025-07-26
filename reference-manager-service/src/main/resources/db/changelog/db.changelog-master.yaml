@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/001-create-tables.yaml
+  - include:
+      file: db/changelog/002-create-indexes.yaml
+  - include:
+      file: db/changelog/003-insert-sample-data.yaml

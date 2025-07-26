@@ -1,0 +1,80 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-create-flight-versions-table
+      author: flight-management
+      changes:
+        - createTable:
+            tableName: flight_versions
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: operational_flight_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version_number
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: change_type
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: change_description
+                  type: VARCHAR(500)
+              - column:
+                  name: previous_data
+                  type: JSON
+              - column:
+                  name: current_data
+                  type: JSON
+                  constraints:
+                    nullable: false
+              - column:
+                  name: changed_fields
+                  type: VARCHAR(255)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 006-add-flight-versions-constraints
+      author: flight-management
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: flight_versions
+            baseColumnNames: operational_flight_id
+            referencedTableName: operational_flights
+            referencedColumnNames: id
+            constraintName: fk_versions_operational_flight
+        - addUniqueConstraint:
+            tableName: flight_versions
+            columnNames: operational_flight_id, version_number
+            constraintName: uk_versions_flight_version
+        - createIndex:
+            tableName: flight_versions
+            indexName: idx_versions_flight
+            columns:
+              - column:
+                  name: operational_flight_id
+        - createIndex:
+            tableName: flight_versions
+            indexName: idx_versions_created_at
+            columns:
+              - column:
+                  name: created_at

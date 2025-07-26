@@ -1,0 +1,66 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-performance-indexes
+      author: flight-management
+      changes:
+        - createIndex:
+            tableName: users
+            indexName: idx_users_airline
+            columns:
+              - column:
+                  name: airline_id
+        - createIndex:
+            tableName: users
+            indexName: idx_users_status
+            columns:
+              - column:
+                  name: is_active
+              - column:
+                  name: is_approved
+        - createIndex:
+            tableName: stations
+            indexName: idx_stations_search
+            columns:
+              - column:
+                  name: name
+              - column:
+                  name: city
+              - column:
+                  name: country
+        - createIndex:
+            tableName: aircraft
+            indexName: idx_aircraft_search
+            columns:
+              - column:
+                  name: manufacturer
+              - column:
+                  name: type
+        - createIndex:
+            tableName: flights
+            indexName: idx_flights_airline_date
+            columns:
+              - column:
+                  name: airline_id
+              - column:
+                  name: flight_date
+        - createIndex:
+            tableName: route_segments
+            indexName: idx_segments_flight_order
+            columns:
+              - column:
+                  name: flight_id
+              - column:
+                  name: segment_order
+
+  - changeSet:
+      id: 002-add-unique-constraints
+      author: flight-management
+      changes:
+        - addUniqueConstraint:
+            tableName: flights
+            columnNames: flight_number, airline_id, flight_date
+            constraintName: uk_flights_number_airline_date
+        - addUniqueConstraint:
+            tableName: route_segments
+            columnNames: flight_id, segment_order
+            constraintName: uk_segments_flight_order

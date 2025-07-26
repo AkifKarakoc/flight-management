@@ -1,0 +1,153 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-upload-batch-table
+      author: flight-management
+      changes:
+        - createTable:
+            tableName: flight_upload_batches
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: file_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_size
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_rows
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: successful_rows
+                  type: INT
+                  defaultValue: 0
+              - column:
+                  name: failed_rows
+                  type: INT
+                  defaultValue: 0
+              - column:
+                  name: conflict_rows
+                  type: INT
+                  defaultValue: 0
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: 'UPLOADED'
+              - column:
+                  name: uploaded_by
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: airline_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processing_start_time
+                  type: TIMESTAMP
+              - column:
+                  name: processing_end_time
+                  type: TIMESTAMP
+              - column:
+                  name: error_summary
+                  type: JSON
+              - column:
+                  name: conflict_summary
+                  type: JSON
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValue: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValue: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 003-create-flight-conflicts-table
+      author: flight-management
+      changes:
+        - createTable:
+            tableName: flight_conflicts
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: upload_batch_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: row_number
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: conflict_type
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: conflict_description
+                  type: VARCHAR(500)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: existing_flight_id
+                  type: BIGINT
+              - column:
+                  name: new_flight_data
+                  type: JSON
+                  constraints:
+                    nullable: false
+              - column:
+                  name: resolution
+                  type: VARCHAR(20)
+              - column:
+                  name: resolved_at
+                  type: TIMESTAMP
+              - column:
+                  name: resolved_by
+                  type: VARCHAR(50)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValue: CURRENT_TIMESTAMP
+
+  - changeSet:
+      id: 004-add-foreign-keys
+      author: flight-management
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: operational_flights
+            baseColumnNames: upload_batch_id
+            referencedTableName: flight_upload_batches
+            referencedColumnNames: id
+            constraintName: fk_flights_upload_batch
+        - addForeignKeyConstraint:
+            baseTableName: flight_conflicts
+            baseColumnNames: upload_batch_id
+            referencedTableName: flight_upload_batches
+            referencedColumnNames: id
+            constraintName: fk_conflicts_upload_batch
+        - addForeignKeyConstraint:
+            baseTableName: flight_conflicts
+            baseColumnNames: existing_flight_id
+            referencedTableName: operational_flights
+            referencedColumnNames: id
+            constraintName: fk_conflicts_existing_flight
