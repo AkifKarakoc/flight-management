@@ -29,7 +29,9 @@ public class OpenApiConfig {
                                 .name("MIT License")
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
-                        new Server().url("http://localhost:8081/reference-manager").description("Development Server")))
+                        new Server()
+                                .url("http://localhost:8081/reference-manager")
+                                .description("Development Server")))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"))
                 .components(new io.swagger.v3.oas.models.Components()
                         .addSecuritySchemes("bearerAuth",

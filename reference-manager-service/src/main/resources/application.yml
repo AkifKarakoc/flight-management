@@ -62,12 +62,22 @@ app:
       aircraft: 3600
 
 # Swagger Configuration
+# Swagger Configuration - mevcut springdoc k?sm?n? bununla de?i?tir
 springdoc:
   api-docs:
     path: /v3/api-docs
+    enabled: true
   swagger-ui:
     path: /swagger-ui.html
+    enabled: true
     try-it-out-enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    disable-swagger-default-url: true
+    # Context path'i dahil et
+    config-url: /reference-manager/v3/api-docs/swagger-config
+    oauth2-redirect-url: /reference-manager/swagger-ui/oauth2-redirect.html
+  show-actuator: false
 
 management:
   endpoints:
