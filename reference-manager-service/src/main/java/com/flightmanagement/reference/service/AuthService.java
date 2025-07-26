@@ -53,17 +53,28 @@ public class AuthService {
     }
 
     public JwtResponseDto login(LoginRequestDto request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+        System.out.println("=== Login attempt for: " + request.getUsername());
+        System.out.println("=== Password provided: " + request.getPassword());
 
-        String token = tokenProvider.generateToken(authentication);
-        User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+            );
 
-        return JwtResponseDto.builder()
-                .token(token)
-                .expiresIn(86400000L)
-                .userInfo(userMapper.toResponseDto(user))
-                .build();
+            System.out.println("=== Authentication successful!");
+
+            String token = tokenProvider.generateToken(authentication);
+            User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+
+            return JwtResponseDto.builder()
+                    .token(token)
+                    .expiresIn(86400000L)
+                    .userInfo(userMapper.toResponseDto(user))
+                    .build();
+
+        } catch (Exception e) {
+            System.out.println("=== Authentication failed: " + e.getMessage());
+            throw e;
+        }
     }
 }

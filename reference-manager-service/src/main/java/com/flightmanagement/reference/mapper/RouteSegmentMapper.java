@@ -7,7 +7,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring", uses = {StationMapper.class})
+@Mapper(componentModel = "spring")
 public interface RouteSegmentMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -17,12 +17,14 @@ public interface RouteSegmentMapper {
     @Mapping(target = "updatedAt", ignore = true)
     RouteSegment toEntity(RouteSegmentCreateRequestDto dto);
 
-    @Mapping(target = "originStation", source = "originStationId")
-    @Mapping(target = "destinationStation", source = "destinationStationId")
+    @Mapping(target = "originStation", ignore = true)
+    @Mapping(target = "destinationStation", ignore = true)
     RouteSegmentResponseDto toResponseDto(RouteSegment segment);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "flight", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "isActive", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     void updateEntityFromDto(RouteSegmentCreateRequestDto dto, @MappingTarget RouteSegment segment);
 }

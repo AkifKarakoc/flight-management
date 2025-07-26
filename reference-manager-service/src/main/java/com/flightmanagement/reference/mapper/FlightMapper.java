@@ -7,7 +7,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
-@Mapper(componentModel = "spring", uses = {AirlineMapper.class, AircraftMapper.class, RouteSegmentMapper.class})
+@Mapper(componentModel = "spring", uses = {RouteSegmentMapper.class})
 public interface FlightMapper {
 
     @Mapping(target = "id", ignore = true)
@@ -17,8 +17,8 @@ public interface FlightMapper {
     @Mapping(target = "segments", ignore = true)
     Flight toEntity(FlightCreateRequestDto dto);
 
-    @Mapping(target = "airline", source = "airlineId")
-    @Mapping(target = "aircraft", source = "aircraftId")
+    @Mapping(target = "airline", ignore = true)
+    @Mapping(target = "aircraft", ignore = true)
     FlightResponseDto toResponseDto(Flight flight);
 
     @Mapping(target = "id", ignore = true)

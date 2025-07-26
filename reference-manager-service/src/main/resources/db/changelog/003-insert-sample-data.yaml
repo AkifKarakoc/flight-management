@@ -137,10 +137,11 @@ databaseChangeLog:
                   value: ADMIN
               - column:
                   name: is_active
-                  value: true
+                  value: 1
               - column:
                   name: is_approved
-                  value: true
+                  value: 1
+
   - changeSet:
       id: 005-insert-sample-flight
       author: flight-management

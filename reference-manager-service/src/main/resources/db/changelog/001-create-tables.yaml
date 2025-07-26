@@ -49,20 +49,20 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: is_active
-                  type: BOOLEAN
-                  defaultValue: false
+                  type: TINYINT(1)
+                  defaultValue: 0
               - column:
                   name: is_approved
-                  type: BOOLEAN
-                  defaultValue: false
+                  type: TINYINT(1)
+                  defaultValue: 0
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
   - changeSet:
       id: 002-create-airlines-table
@@ -93,16 +93,16 @@ databaseChangeLog:
                   type: VARCHAR(50)
               - column:
                   name: is_active
-                  type: BOOLEAN
-                  defaultValue: true
+                  type: TINYINT(1)
+                  defaultValue: 0
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
   - changeSet:
       id: 003-create-stations-table
@@ -144,16 +144,16 @@ databaseChangeLog:
                   type: VARCHAR(50)
               - column:
                   name: is_active
-                  type: BOOLEAN
-                  defaultValue: true
+                  type: TINYINT(1)
+                  defaultValue: 0
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
   - changeSet:
       id: 004-create-aircraft-table
@@ -184,16 +184,17 @@ databaseChangeLog:
                   type: INT
               - column:
                   name: is_active
-                  type: BOOLEAN
-                  defaultValue: true
+                  type: TINYINT(1)
+                  defaultValue: 0
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+
   - changeSet:
       id: 005-create-flights-table
       author: flight-management
@@ -244,101 +245,101 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: is_active
-                  type: BOOLEAN
-                  defaultValue: true
+                  type: TINYINT(1)
+                  defaultValue: 0
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
-        - changeSet:
-            id: 006-create-route-segments-table
-            author: flight-management
-            changes:
-              - createTable:
-                  tableName: route_segments
-                  columns:
-                    - column:
-                        name: id
-                        type: BIGINT
-                        autoIncrement: true
-                        constraints:
-                          primaryKey: true
-                    - column:
-                        name: flight_id
-                        type: BIGINT
-                        constraints:
-                          nullable: false
-                    - column:
-                        name: segment_order
-                        type: INT
-                        constraints:
-                          nullable: false
-                    - column:
-                        name: origin_station_id
-                        type: BIGINT
-                        constraints:
-                          nullable: false
-                    - column:
-                        name: destination_station_id
-                        type: BIGINT
-                        constraints:
-                          nullable: false
-                    - column:
-                        name: scheduled_departure
-                        type: TIMESTAMP
-                        constraints:
-                          nullable: false
-                    - column:
-                        name: scheduled_arrival
-                        type: TIMESTAMP
-                        constraints:
-                          nullable: false
-                    - column:
-                        name: distance
-                        type: INT
-                    - column:
-                        name: is_active
-                        type: BOOLEAN
-                        defaultValue: true
-                    - column:
-                        name: created_at
-                        type: TIMESTAMP
-                        defaultValue: CURRENT_TIMESTAMP
-                    - column:
-                        name: updated_at
-                        type: TIMESTAMP
-                        defaultValue: CURRENT_TIMESTAMP
+  - changeSet:
+      id: 006-create-route-segments-table
+      author: flight-management
+      changes:
+        - createTable:
+            tableName: route_segments
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: flight_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: segment_order
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: origin_station_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: destination_station_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_departure
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scheduled_arrival
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: distance
+                  type: INT
+              - column:
+                  name: is_active
+                  type: TINYINT(1)
+                  defaultValue: 0
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
-        - changeSet:
-            id: 007-add-foreign-keys
-            author: flight-management
-            changes:
-              - addForeignKeyConstraint:
-                  baseTableName: users
-                  baseColumnNames: airline_id
-                  referencedTableName: airlines
-                  referencedColumnNames: id
-                  constraintName: fk_users_airline
-              - addForeignKeyConstraint:
-                  baseTableName: flights
-                  baseColumnNames: airline_id
-                  referencedTableName: airlines
-                  referencedColumnNames: id
-                  constraintName: fk_flights_airline
-              - addForeignKeyConstraint:
-                  baseTableName: flights
-                  baseColumnNames: aircraft_id
-                  referencedTableName: aircraft
-                  referencedColumnNames: id
-                  constraintName: fk_flights_aircraft
-              - addForeignKeyConstraint:
-                  baseTableName: route_segments
-                  baseColumnNames: flight_id
-                  referencedTableName: flights
-                  referencedColumnNames: id
-                  constraintName: fk_segments_flight
+  - changeSet:
+      id: 007-add-foreign-keys
+      author: flight-management
+      changes:
+        - addForeignKeyConstraint:
+            baseTableName: users
+            baseColumnNames: airline_id
+            referencedTableName: airlines
+            referencedColumnNames: id
+            constraintName: fk_users_airline
+        - addForeignKeyConstraint:
+            baseTableName: flights
+            baseColumnNames: airline_id
+            referencedTableName: airlines
+            referencedColumnNames: id
+            constraintName: fk_flights_airline
+        - addForeignKeyConstraint:
+            baseTableName: flights
+            baseColumnNames: aircraft_id
+            referencedTableName: aircraft
+            referencedColumnNames: id
+            constraintName: fk_flights_aircraft
+        - addForeignKeyConstraint:
+            baseTableName: route_segments
+            baseColumnNames: flight_id
+            referencedTableName: flights
+            referencedColumnNames: id
+            constraintName: fk_segments_flight

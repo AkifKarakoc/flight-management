@@ -4,6 +4,7 @@ import com.flightmanagement.reference.dto.request.FlightCreateRequestDto;
 import com.flightmanagement.reference.dto.response.FlightResponseDto;
 import com.flightmanagement.reference.dto.response.PagedResponse;
 import com.flightmanagement.reference.security.UserContext;
+import com.flightmanagement.reference.security.UserPrincipal;
 import com.flightmanagement.reference.service.FlightService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -77,10 +78,12 @@ public class FlightController {
     }
 
     private UserContext extractUserContext(Authentication authentication) {
+        UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
         return UserContext.builder()
-                .username(authentication.getName())
-                .airlineId(1L) // This should be extracted from JWT
-                .roles(authentication.getAuthorities().stream()
+                .userId(userPrincipal.getId())
+                .username(userPrincipal.getUsername())
+                .airlineId(userPrincipal.getAirlineId())
+                .roles(userPrincipal.getAuthorities().stream()
                         .map(Object::toString).toList())
                 .build();
     }
