@@ -9,14 +9,17 @@ import com.flightmanagement.flight.service.OperationalFlightService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.mockito.Mock;
-import org.springframework.context.annotation.Import;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -25,13 +28,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(OperationalFlightController.class)
-@Import(FlightService.class)
+@ActiveProfiles("test")
 class OperationalFlightControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Mock
+    @MockBean
     private OperationalFlightService flightService;
 
     @Autowired
@@ -57,18 +60,47 @@ class OperationalFlightControllerTest {
         response.setFlightNumber("TK123");
 
         UserContext userContext = UserContext.builder()
+                .userId(1L)
                 .username("admin")
+                .roles(List.of("ROLE_ADMIN"))
                 .build();
 
         when(flightService.createFlight(any(), any())).thenReturn(response);
 
+        // Create authentication with UserContext as principal
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                userContext, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
         // When & Then
         mockMvc.perform(post("/api/v1/flights")
-                        .with(authentication(null))
+                        .with(authentication(auth))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.flightNumber").value("TK123"));
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void createFlight_InvalidRequest_ReturnsBadRequest() throws Exception {
+        // Given - empty request (missing required fields)
+        OperationalFlightCreateRequestDto request = new OperationalFlightCreateRequestDto();
+
+        UserContext userContext = UserContext.builder()
+                .userId(1L)
+                .username("admin")
+                .roles(List.of("ROLE_ADMIN"))
+                .build();
+
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                userContext, null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+
+        // When & Then
+        mockMvc.perform(post("/api/v1/flights")
+                        .with(authentication(auth))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

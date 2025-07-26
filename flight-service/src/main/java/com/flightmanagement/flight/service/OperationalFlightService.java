@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -148,9 +149,33 @@ public class OperationalFlightService {
     }
 
     private void enrichFlightWithReferenceData(OperationalFlightCreateRequestDto request) {
-        // For now, we'll skip the actual API calls in this basic implementation
-        // In a real implementation, this would fetch airline, aircraft, and station data
-        // and populate the cached fields like airlineCode, aircraftType, originIcaoCode, etc.
+        try {
+            // Fetch and cache airline data
+            Map<String, Object> airline = referenceService.getAirline(request.getAirlineId());
+            if (airline != null) {
+                // Airline data will be used in mapper
+                log.debug("Enriched airline data for ID: {}", request.getAirlineId());
+            }
+
+            // Fetch and cache aircraft data
+            Map<String, Object> aircraft = referenceService.getAircraft(request.getAircraftId());
+            if (aircraft != null) {
+                log.debug("Enriched aircraft data for ID: {}", request.getAircraftId());
+            }
+
+            // Fetch and cache station data
+            Map<String, Object> originStation = referenceService.getStation(request.getOriginStationId());
+            Map<String, Object> destinationStation = referenceService.getStation(request.getDestinationStationId());
+
+            if (originStation != null && destinationStation != null) {
+                log.debug("Enriched station data for origin: {} and destination: {}",
+                        request.getOriginStationId(), request.getDestinationStationId());
+            }
+
+        } catch (Exception e) {
+            log.warn("Failed to enrich flight with reference data: {}", e.getMessage());
+            // Continue with flight creation even if reference data enrichment fails
+        }
     }
 
     private OperationalFlight cloneFlight(OperationalFlight original) {

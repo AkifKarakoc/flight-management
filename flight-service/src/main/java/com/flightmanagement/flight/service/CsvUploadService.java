@@ -26,7 +26,6 @@ import java.io.InputStreamReader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -41,9 +40,11 @@ public class CsvUploadService {
     private final FlightConflictRepository conflictRepository;
     private final OperationalFlightMapper flightMapper;
     private final ConflictDetectionService conflictService;
+    private final FlightEnrichmentService enrichmentService;
     private final EventPublishService eventPublishService;
+    private final WebSocketService webSocketService;
 
-    @Async
+    @Async("csvProcessingExecutor")
     @Transactional
     public CompletableFuture<FlightUploadBatchResponseDto> processUpload(
             MultipartFile file, UserContext userContext) {
@@ -56,25 +57,36 @@ public class CsvUploadService {
             batch.setProcessingStartTime(LocalDateTime.now());
             batchRepository.save(batch);
 
-            List<CsvFlightData> csvData = parseCsvFile(file);
+            // Notify upload start
+            webSocketService.notifyUploadProgress(batch);
+
+            List<CsvFlightRow> csvData = parseCsvFile(file);
             batch.setTotalRows(csvData.size());
 
-            List<OperationalFlightCreateRequestDto> validFlights = new ArrayList<>();
+            List<FlightCreationData> validFlights = new ArrayList<>();
             List<FlightConflict> conflicts = new ArrayList<>();
 
             for (int i = 0; i < csvData.size(); i++) {
                 try {
-                    CsvFlightData rowData = csvData.get(i);
-                    OperationalFlightCreateRequestDto flightDto = mapCsvToFlightDto(rowData);
+                    CsvFlightRow rowData = csvData.get(i);
 
-                    // Detect conflicts
-                    var rowConflicts = conflictService.detectConflicts(flightDto);
+                    // Create enriched flight data
+                    FlightCreationData flightData = enrichCsvRow(rowData, userContext);
+
+                    // Detect conflicts using the enriched data
+                    var rowConflicts = conflictService.detectConflicts(flightData.getFlightDto());
                     if (!rowConflicts.isEmpty()) {
-                        conflicts.addAll(mapToFlightConflicts(rowConflicts, batch.getId(), i + 1));
+                        conflicts.addAll(mapToFlightConflicts(rowConflicts, batch.getId(), i + 1, rowData));
                         batch.setConflictRows(batch.getConflictRows() + 1);
                     } else {
-                        validFlights.add(flightDto);
+                        validFlights.add(flightData);
                         batch.setSuccessfulRows(batch.getSuccessfulRows() + 1);
+                    }
+
+                    // Update progress periodically
+                    if ((i + 1) % 10 == 0) {
+                        batchRepository.save(batch);
+                        webSocketService.notifyUploadProgress(batch);
                     }
 
                 } catch (Exception e) {
@@ -102,31 +114,56 @@ public class CsvUploadService {
         } finally {
             batch.setProcessingEndTime(LocalDateTime.now());
             batchRepository.save(batch);
+            webSocketService.notifyUploadCompleted(batch);
         }
 
         return CompletableFuture.completedFuture(mapToBatchResponseDto(batch));
     }
 
-    private FlightUploadBatch createUploadBatch(MultipartFile file, UserContext userContext) {
-        return FlightUploadBatch.builder()
-                .fileName(file.getOriginalFilename())
-                .fileSize(file.getSize())
-                .totalRows(0)
-                .uploadedBy(userContext.getUsername())
-                .airlineId(userContext.getAirlineId())
-                .build();
+    private FlightCreationData enrichCsvRow(CsvFlightRow csvRow, UserContext userContext) {
+        // Create basic DTO
+        OperationalFlightCreateRequestDto dto = mapCsvToFlightDto(csvRow);
+
+        // Create temporary flight entity for enrichment
+        OperationalFlight tempFlight = flightMapper.toEntity(dto);
+
+        // Enrich with reference data
+        enrichmentService.enrichFromCsvData(tempFlight,
+                csvRow.getAirlineCode(),
+                csvRow.getAircraftType(),
+                csvRow.getOriginIcaoCode(),
+                csvRow.getDestinationIcaoCode());
+
+        // Update DTO with enriched IDs
+        if (tempFlight.getAirlineId() != null) {
+            dto.setAirlineId(tempFlight.getAirlineId());
+        }
+        if (tempFlight.getAircraftId() != null) {
+            dto.setAircraftId(tempFlight.getAircraftId());
+        }
+        if (tempFlight.getOriginStationId() != null) {
+            dto.setOriginStationId(tempFlight.getOriginStationId());
+        }
+        if (tempFlight.getDestinationStationId() != null) {
+            dto.setDestinationStationId(tempFlight.getDestinationStationId());
+        }
+
+        return new FlightCreationData(dto, csvRow, tempFlight);
     }
 
-    private List<CsvFlightData> parseCsvFile(MultipartFile file) throws Exception {
-        List<CsvFlightData> result = new ArrayList<>();
+    private List<CsvFlightRow> parseCsvFile(MultipartFile file) throws Exception {
+        List<CsvFlightRow> result = new ArrayList<>();
 
         try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
             String[] headers = reader.readNext(); // Skip header
             String[] line;
+            int rowNumber = 1;
 
             while ((line = reader.readNext()) != null) {
+                rowNumber++;
                 if (line.length >= 9) { // Minimum required columns
-                    CsvFlightData data = CsvFlightData.builder()
+                    CsvFlightRow data = CsvFlightRow.builder()
+                            .rowNumber(rowNumber)
                             .flightNumber(line[0])
                             .airlineCode(line[1])
                             .aircraftType(line[2])
@@ -147,26 +184,28 @@ public class CsvUploadService {
         return result;
     }
 
-    private OperationalFlightCreateRequestDto mapCsvToFlightDto(CsvFlightData csvData) {
+    private OperationalFlightCreateRequestDto mapCsvToFlightDto(CsvFlightRow csvData) {
         OperationalFlightCreateRequestDto dto = new OperationalFlightCreateRequestDto();
 
         dto.setFlightNumber(csvData.getFlightNumber());
-        dto.setAirlineId(1L); // This should be resolved from airlineCode
-        dto.setAircraftId(1L); // This should be resolved from aircraftType
         dto.setFlightDate(LocalDate.parse(csvData.getFlightDate()));
         dto.setScheduledDepartureTime(LocalTime.parse(csvData.getScheduledDepartureTime()));
         dto.setScheduledArrivalTime(LocalTime.parse(csvData.getScheduledArrivalTime()));
-        dto.setOriginStationId(1L); // This should be resolved from ICAO code
-        dto.setDestinationStationId(2L); // This should be resolved from ICAO code
         dto.setFlightType(FlightType.valueOf(csvData.getFlightType()));
         dto.setGate(csvData.getGate());
         dto.setTerminal(csvData.getTerminal());
+
+        // Set temporary IDs - these will be resolved by enrichment service
+        dto.setAirlineId(1L);
+        dto.setAircraftId(1L);
+        dto.setOriginStationId(1L);
+        dto.setDestinationStationId(1L);
 
         return dto;
     }
 
     private List<FlightConflict> mapToFlightConflicts(
-            List<ConflictDetectionService.Conflict> conflicts, Long batchId, int rowNumber) {
+            List<ConflictDetectionService.Conflict> conflicts, Long batchId, int rowNumber, CsvFlightRow csvData) {
 
         return conflicts.stream()
                 .map(conflict -> FlightConflict.builder()
@@ -174,17 +213,17 @@ public class CsvUploadService {
                         .rowNumber(rowNumber)
                         .conflictType(conflict.getType())
                         .conflictDescription(conflict.getDescription())
-                        .newFlightData("{}")
+                        .newFlightData(formatCsvRowAsJson(csvData))
                         .build())
                 .toList();
     }
 
-    private void processValidFlights(List<OperationalFlightCreateRequestDto> flights,
+    private void processValidFlights(List<FlightCreationData> flightDataList,
                                      FlightUploadBatch batch, UserContext userContext) {
 
-        for (OperationalFlightCreateRequestDto flightDto : flights) {
+        for (FlightCreationData flightData : flightDataList) {
             try {
-                OperationalFlight flight = flightMapper.toEntity(flightDto);
+                OperationalFlight flight = flightData.getEnrichedFlight();
                 flight.setCreatedBy(userContext.getUsername());
                 flight.setUpdatedBy(userContext.getUsername());
                 flight.setUploadBatchId(batch.getId());
@@ -198,6 +237,38 @@ public class CsvUploadService {
                 batch.setSuccessfulRows(batch.getSuccessfulRows() - 1);
             }
         }
+    }
+
+    private String formatCsvRowAsJson(CsvFlightRow csvData) {
+        return String.format("""
+            {
+                "flightNumber": "%s",
+                "airlineCode": "%s",
+                "aircraftType": "%s",
+                "flightDate": "%s",
+                "scheduledDepartureTime": "%s",
+                "scheduledArrivalTime": "%s",
+                "originIcaoCode": "%s",
+                "destinationIcaoCode": "%s",
+                "flightType": "%s",
+                "gate": "%s",
+                "terminal": "%s"
+            }
+            """,
+                csvData.getFlightNumber(), csvData.getAirlineCode(), csvData.getAircraftType(),
+                csvData.getFlightDate(), csvData.getScheduledDepartureTime(), csvData.getScheduledArrivalTime(),
+                csvData.getOriginIcaoCode(), csvData.getDestinationIcaoCode(), csvData.getFlightType(),
+                csvData.getGate(), csvData.getTerminal());
+    }
+
+    private FlightUploadBatch createUploadBatch(MultipartFile file, UserContext userContext) {
+        return FlightUploadBatch.builder()
+                .fileName(file.getOriginalFilename())
+                .fileSize(file.getSize())
+                .totalRows(0)
+                .uploadedBy(userContext.getUsername())
+                .airlineId(userContext.getAirlineId())
+                .build();
     }
 
     private FlightUploadBatchResponseDto mapToBatchResponseDto(FlightUploadBatch batch) {
@@ -214,10 +285,11 @@ public class CsvUploadService {
         return dto;
     }
 
-    // Inner class for CSV data
+    // Inner classes
     @lombok.Data
     @lombok.Builder
-    public static class CsvFlightData {
+    public static class CsvFlightRow {
+        private int rowNumber;
         private String flightNumber;
         private String airlineCode;
         private String aircraftType;
@@ -229,5 +301,13 @@ public class CsvUploadService {
         private String flightType;
         private String gate;
         private String terminal;
+    }
+
+    @lombok.Data
+    @lombok.AllArgsConstructor
+    public static class FlightCreationData {
+        private OperationalFlightCreateRequestDto flightDto;
+        private CsvFlightRow csvRow;
+        private OperationalFlight enrichedFlight;
     }
 }
