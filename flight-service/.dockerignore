@@ -1,0 +1,29 @@
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Source code (only jar needed)
+src/
+pom.xml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
