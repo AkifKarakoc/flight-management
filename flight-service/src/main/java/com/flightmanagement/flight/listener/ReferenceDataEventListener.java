@@ -2,6 +2,7 @@ package com.flightmanagement.flight.listener;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -11,6 +12,7 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnProperty(name = "spring.kafka.bootstrap-servers")
 public class ReferenceDataEventListener {
 
     private final CacheManager cacheManager;

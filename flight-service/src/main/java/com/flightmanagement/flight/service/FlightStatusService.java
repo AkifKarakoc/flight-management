@@ -69,7 +69,7 @@ public class FlightStatusService {
         eventPublishService.publishFlightEvent("STATUS_CHANGED", flight, userContext);
 
         // WebSocket notification
-        webSocketService.notifyFlightStatusUpdate(flight, previousStatus);
+        webSocketService.notifyFlightStatusUpdate(flight);
 
         log.info("Updated flight status: {} from {} to {}", flight.getFlightNumber(), previousStatus, flight.getStatus());
         return flightMapper.toResponseDto(flight);

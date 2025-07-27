@@ -68,11 +68,11 @@ databaseChangeLog:
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
   - changeSet:
       id: 003-create-flight-conflicts-table
@@ -127,7 +127,7 @@ databaseChangeLog:
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
 
   - changeSet:
       id: 004-add-foreign-keys

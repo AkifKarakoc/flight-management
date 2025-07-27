@@ -121,16 +121,16 @@ databaseChangeLog:
                   type: BIGINT
               - column:
                   name: is_active
-                  type: BOOLEAN
-                  defaultValue: true
+                  type: TINYINT(1)
+                  defaultValue: 1
               - column:
                   name: created_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: updated_at
                   type: TIMESTAMP
-                  defaultValue: CURRENT_TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: created_by
                   type: VARCHAR(50)
